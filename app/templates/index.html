@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %} Main Page {% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 ps-2">
+                <div class="tool-bar mt-1 my-1">
+                    <div class="row mx-1 mx-1 my-1">
+                        <select class="form-select">
+                            <option selected> ALL</option>
+                            <option value="1"> S00_112</option>
+                            <option value="2"> S00_113</option>
+                            <option value="3"> S00_114</option>
+                            <option value="4"> S00_115</option>
+                        </select>
+                    </div>
+                    <div class="w-100 d-flex px-1 py-1">
+                        <input type="text" class="me-2" name="daterange" value="01/01/2018 - 01/15/2018" />
+                        <button type="button" class="btn btn-success btn-apply">Apply</button>
+                    </div>
+                    <div class="row mx-1 mt-4">
+                        <table id="applications" class="table table-striped" style="width:100%">
+                            <thead>
+                                <tr>
+                                    <th>Device ID</th>
+                                    <th>Status</th>
+                                    <th>Last Update</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>STT001</td>
+                                    <td>ONLINE</td>
+                                    <td>0 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td>STT101</td>
+                                    <td>ONLINE</td>
+                                    <td>0 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td>SHIP</td>
+                                    <td>OFFLINE</td>
+                                    <td>1 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td>TAGGER</td>
+                                    <td>OFFLINE</td>
+                                    <td>3 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td>STT401</td>
+                                    <td>ONLINE</td>
+                                    <td>0 minutes</td>
+                                </tr>
+                                <tr>
+                                    <td>STT101</td>
+                                    <td>OFFLINE</td>
+                                    <td>2 minutes</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="row mx-1 my-1">
+                        <button type="button" class="btn btn-success">Export CSV</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-9">
+                <div id="map">
+    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rowsData = JSON.parse('{{ rows|safe }}');
+        console.log(rowsData)
+        var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(map);
+    
+        rowsData.map(item=>{
+            var marker = L.marker([item[1], item[2]]).addTo(map); 
+        })
+        $(function() {
+            $('input[name="daterange"]').daterangepicker({
+                opens: 'left'
+            }, function(start, end, label) {
+                console.log("A new date selection was made: " + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
+            });
+        });
+        $('#applications').DataTable({
+            lengthChange:false,
+            searching: false,
+            order: [[2, 'asc']],
+            // pagingType: "numbers-ellipses",
+            columns: [
+                {data:'id', orderable:false},
+                {data:'status', orderable:false},
+                {data:'time'},
+            ]
+        });
+    </script>
+    
+{% endblock %}

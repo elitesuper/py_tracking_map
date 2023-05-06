@@ -5,7 +5,7 @@
 {% block content %}
     <div class="container-fluid">
         <div class="row">
-            <div class="col-md-3 ps-2">
+            <div class="col-md-3 col-lg-4 ps-2">
                 <div class="tool-bar mt-1 my-1">
                     <div class="row mx-1 mx-1 my-1">
                         <select class="form-select">
@@ -29,38 +29,6 @@
                                     <th>Last Update</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>STT001</td>
-                                    <td>ONLINE</td>
-                                    <td>0 minutes</td>
-                                </tr>
-                                <tr>
-                                    <td>STT101</td>
-                                    <td>ONLINE</td>
-                                    <td>0 minutes</td>
-                                </tr>
-                                <tr>
-                                    <td>SHIP</td>
-                                    <td>OFFLINE</td>
-                                    <td>1 minutes</td>
-                                </tr>
-                                <tr>
-                                    <td>TAGGER</td>
-                                    <td>OFFLINE</td>
-                                    <td>3 minutes</td>
-                                </tr>
-                                <tr>
-                                    <td>STT401</td>
-                                    <td>ONLINE</td>
-                                    <td>0 minutes</td>
-                                </tr>
-                                <tr>
-                                    <td>STT101</td>
-                                    <td>OFFLINE</td>
-                                    <td>2 minutes</td>
-                                </tr>
-                            </tbody>
                         </table>
                     </div>
                     <div class="row mx-1 my-1">
@@ -68,7 +36,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-9">
+            <div class="col-md-9 col-lg-8">
                 <div id="map">
     
                 </div>
@@ -77,35 +45,43 @@
     </div>
 
     <script>
-        const rowsData = JSON.parse('{{ rows|safe }}');
-        console.log(rowsData)
-        var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        }).addTo(map);
-    
-        rowsData.map(item=>{
-            var marker = L.marker([item[1], item[2]]).addTo(map); 
-        })
-        $(function() {
-            $('input[name="daterange"]').daterangepicker({
-                opens: 'left'
-            }, function(start, end, label) {
-                console.log("A new date selection was made: " + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
+        $(document).ready(function(){
+            const rowsData = JSON.parse('{{ rows|safe }}');
+            console.log(rowsData)
+            var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            }).addTo(map);
+        
+            rowsData.map(item => {
+                var marker = L.marker([item[1], item[2]]).addTo(map); 
+            })
+            $(function() {
+                $('input[name="daterange"]').daterangepicker({
+                    opens: 'left'
+                }, function(start, end, label) {
+                    console.log("A new date selection was made: " + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
+                });
             });
-        });
-        $('#applications').DataTable({
-            lengthChange:false,
-            searching: false,
-            order: [[2, 'asc']],
-            // pagingType: "numbers-ellipses",
-            columns: [
-                {data:'id', orderable:false},
-                {data:'status', orderable:false},
-                {data:'time'},
-            ]
-        });
+
+            $('#applications').DataTable({
+                processing: true,
+                serverSide: true,
+                lengthChange:false,
+                searching: false,
+                order: [[2, 'asc']],
+                ajax: {
+                    url : 'get-data/',
+                    type : 'POST',
+                },
+                columns: [
+                    {data:'id', orderable:false},
+                    {data:'status', orderable:false},
+                    {data:'time'},
+                ]
+            });
+        })
     </script>
     
 {% endblock %}

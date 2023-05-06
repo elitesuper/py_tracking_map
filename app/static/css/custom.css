@@ -1,2 +1,9 @@
 #map { height: 100vh; padding-top: 1rem; padding-bottom: 1rem;}
 .btn-apply {width: inherit;}
+.paginate_button > a{
+    font-size: 12px;
+    padding: 1px !important;
+}
+.dataTables_info{
+    font-size: 12px;
+}

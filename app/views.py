@@ -10,12 +10,18 @@ import json
 @login_required
 def index(request):
     with connections['trackdb'].cursor() as cursor:
-        cursor.execute("SELECT * FROM track_table LIMIT 0, 10")
+        cursor.execute("SELECT * FROM track_table")
         rows = cursor.fetchall()
+        cursor.execute("SELECT id FROM track_table GROUP BY id")
+        ids = cursor.fetchall()
 
-    print(rows)
+    # print(rows)
+    # print(ids)
+    ids_data = [{"id":id[0]} for id in ids]
+    print(ids_data)
     context = {
         'rows': json.dumps(rows),
+        'trucks': ids_data
     }
     return render(request, 'index.html', context)
 
@@ -33,6 +39,22 @@ def user_login(request):
             return render(request, 'login.html', {'error': 'Invalid username or password'})
     else:
         return render(request, 'login.html')
+
+@csrf_exempt
+def get_id_tracks(request):
+    if request.method == 'POST':
+        id = request.POST['id']
+        with connections['trackdb'].cursor() as cursor:
+            if id == "ALL":
+                cursor.execute("SELECT * FROM track_table")
+            else:
+                cursor.execute("SELECT * FROM track_table WHERE id = %s", [id])
+            data = cursor.fetchall()
+
+        return JsonResponse ({
+            'status' : 'OK',
+            'rows': data,
+        })
 
 @csrf_exempt
 def get_data(request):

@@ -9,11 +9,10 @@
                 <div class="tool-bar mt-1 my-1">
                     <div class="row mx-1 mx-1 my-1">
                         <select class="form-select">
-                            <option selected> ALL</option>
-                            <option value="1"> S00_112</option>
-                            <option value="2"> S00_113</option>
-                            <option value="3"> S00_114</option>
-                            <option value="4"> S00_115</option>
+                            <option value="ALL" selected> ALL</option>
+                            {% for truck in trucks %}
+                                <option value={{truck.id}}> {{truck.id}}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="w-100 d-flex px-1 py-1">
@@ -50,13 +49,38 @@
             console.log(rowsData)
             var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
+                maxZoom: 13,
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
         
             rowsData.map(item => {
                 var marker = L.marker([item[1], item[2]]).addTo(map); 
             })
+
+            $('select').change(function() {
+                var truckId = $(this).val();
+                $.ajax({
+                  url: '/get-id-tracks/',
+                  type: 'POST',
+                  data: {'id':truckId},
+                  success: function(response) {
+                    console.log(response)
+                    map.eachLayer(function(layer) {
+                        if (layer instanceof L.Marker) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    map.setView([response.rows[0][1], response.rows[0][2]], 13);
+                    response.rows.map(item => {
+                        var marker = L.marker([item[1], item[2]]).addTo(map); 
+                    })                    
+                  },
+                  error: function(xhr) {
+                    console.log(xhr.responseText);
+                  }
+                });
+              });
+
             $(function() {
                 $('input[name="daterange"]').daterangepicker({
                     opens: 'left'
@@ -70,7 +94,7 @@
                 serverSide: true,
                 lengthChange:false,
                 searching: false,
-                order: [[2, 'asc']],
+                ordering: false,
                 ajax: {
                     url : 'get-data/',
                     type : 'POST',

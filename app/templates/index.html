@@ -77,10 +77,34 @@
                 },
                 columns: [
                     {data:'id', orderable:false},
-                    {data:'status', orderable:false},
-                    {data:'time'},
+                    {
+                        data:'status', 
+                        orderable:false,
+                        render: function(data, type, row) {
+                            if(data == "1")
+                                return "ONLINE"
+                            else
+                                return "OFFLINE" 
+                        }
+                    },
+                    {
+                        data:'time',
+                        render: function(data, type, row) {
+                            var changed = timeformat(data)
+                            return changed
+                        }
+                    },
                 ]
             });
+
+            function timeformat(data){
+                prevtime = parseInt(data)
+                currenttime = Date.now()
+                timedivide = currenttime - prevtime
+                m_date = new Date(timedivide).toISOString()
+                datetime = m_date.substr(0, 10) + " " + m_date.substr(11, 8);
+                return datetime
+            }
         })
     </script>
     

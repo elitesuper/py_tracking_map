@@ -7,18 +7,6 @@
         <div class="row">
             <div class="col-md-3 col-lg-4 ps-2">
                 <div class="tool-bar mt-1 my-1">
-                    <div class="row mx-1 mx-1 my-1">
-                        <select class="form-select">
-                            <option value="ALL" selected> ALL</option>
-                            {% for truck in trucks %}
-                                <option value={{truck.id}}> {{truck.id}}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="w-100 d-flex px-1 py-1">
-                        <input type="text" class="me-2" name="daterange" value="01/01/2018 - 01/15/2018" />
-                        <button type="button" class="btn btn-success btn-apply">Apply</button>
-                    </div>
                     <div class="row mx-1 mt-4">
                         <table id="applications" class="table table-striped" style="width:100%">
                             <thead>
@@ -31,7 +19,11 @@
                             </thead>
                         </table>
                     </div>
-                    <div class="row mx-1 my-1">
+                    <div class="w-100 d-flex px-3 py-1 mt-4">
+                        <input type="text" class="me-2" name="daterange" value="01/01/2018 - 01/15/2018" />
+                        <button type="button" class="btn btn-success btn-apply">Apply</button>
+                    </div>
+                    <div class="row mx-3 my-1">
                         <button type="button" class="btn btn-success">Export CSV</button>
                     </div>
                 </div>

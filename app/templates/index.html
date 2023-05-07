@@ -23,6 +23,7 @@
                         <table id="applications" class="table table-striped" style="width:100%">
                             <thead>
                                 <tr>
+                                    <th></th>
                                     <th>Device ID</th>
                                     <th>Status</th>
                                     <th>Last Update</th>
@@ -49,7 +50,7 @@
             console.log(rowsData)
             var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 13,
+                maxZoom: 19,
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
         
@@ -57,7 +58,7 @@
                 var marker = L.marker([item[1], item[2]]).addTo(map); 
             })
 
-            $('select').change(function() {
+            /* $('select').change(function() {
                 var truckId = $(this).val();
                 $.ajax({
                   url: '/get-id-tracks/',
@@ -70,7 +71,7 @@
                             map.removeLayer(layer);
                         }
                     });
-                    map.setView([response.rows[0][1], response.rows[0][2]], 13);
+                    map.setView([response.rows[0][1], response.rows[0][2]], 19);
                     response.rows.map(item => {
                         var marker = L.marker([item[1], item[2]]).addTo(map); 
                     })                    
@@ -80,7 +81,7 @@
                   }
                 });
               });
-
+            */
             $(function() {
                 $('input[name="daterange"]').daterangepicker({
                     opens: 'left'
@@ -94,13 +95,37 @@
                 serverSide: true,
                 lengthChange:false,
                 searching: false,
-                ordering: false,
+                columnDefs: [ {
+                    orderable: false,
+                    className: 'select-checkbox',
+                    targets:   0,
+                    checkboxes: {
+                        selectRow: true,
+                        selectAllPages: false
+                    }
+                } ],
+                select: {
+                    style: 'multi',
+                    selector: 'td:first-child'
+                },
+                order: [[ 1, 'asc' ]],
+                fnRowCallback: function(nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+                    style = timestyle(aData.time)
+                    $('td', nRow).css('background-color', style);
+                },
                 ajax: {
                     url : 'get-data/',
                     type : 'POST',
                 },
                 columns: [
-                    {data:'id', orderable:false},
+                    {
+                        data:null, 
+                        orderable:false, 
+                        render:function(data, type, full, meta){
+                            return "";
+                        }
+                    },
+                    {data:'id'},
                     {
                         data:'status', 
                         orderable:false,
@@ -121,13 +146,49 @@
                 ]
             });
 
+            var table = $('#applications').DataTable();
+            $('#applications tbody').on('click', 'tr', function () {
+                // Toggle the selected class on the selected row
+                $(this).toggleClass('selected');
+            
+                // Get selected rows and log their data
+                var selectedRows = table.rows('.selected').data();
+
+                console.log(selectedRows)
+                map.eachLayer(function(layer) {
+                    if (layer instanceof L.Marker) {
+                        map.removeLayer(layer);
+                    }
+                });
+                if(selectedRows.length > 0){
+                    map.setView([selectedRows[0].lat, selectedRows[0].lon], 19);
+                }
+
+                selectedRows.each(function (rowData) {
+                    var marker = L.marker([rowData.lat, rowData.lon]).addTo(map); 
+                });
+            });
+
             function timeformat(data){
+                prevtime = parseInt(data)
+                m_date = new Date(prevtime).toISOString()
+                datetime = m_date.substr(0, 10) + " " + m_date.substr(11, 8);
+                return datetime
+            }
+            function timestyle(data){
                 prevtime = parseInt(data)
                 currenttime = Date.now()
                 timedivide = currenttime - prevtime
-                m_date = new Date(timedivide).toISOString()
-                datetime = m_date.substr(0, 10) + " " + m_date.substr(11, 8);
-                return datetime
+                console.log(timedivide)
+                if (timedivide < 600000)
+                    return "#7af57a"
+                if(timedivide > 14400000){
+                    return '#ff7588'
+                }
+                if (timedivide > 600000){
+                    return '#fcc772'
+                }
+                
             }
         })
     </script>

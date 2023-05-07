@@ -10,7 +10,7 @@ import json
 @login_required
 def index(request):
     with connections['trackdb'].cursor() as cursor:
-        cursor.execute("SELECT * FROM track_table")
+        cursor.execute("SELECT * FROM track_table LIMIT 0, 10")
         rows = cursor.fetchall()
         cursor.execute("SELECT id FROM track_table GROUP BY id")
         ids = cursor.fetchall()
@@ -74,7 +74,9 @@ def get_data(request):
     data = [{
         'id' : row[0],
         'status' : row[5],
-        'time' : row[3]
+        'time' : row[3],
+        'lat' : row[1],
+        'lon' : row[2]
     } for row in rows]
 
     return JsonResponse ({

@@ -26,7 +26,8 @@ SECRET_KEY = 'django-insecure-(_3dj=&owl2zwjzczl-x%=-gvq#-su3tp!x#=wit^vtrjuh+5#
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["149.28.180.176", "reverseshell.xyz"]
+ALLOWED_HOSTS = ["149.28.180.176", "localhost", "reverseshell.xyz"]
+INTERNAL_IPS = ('127.0.0.1', )
 
 
 # Application definition
@@ -126,6 +127,9 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, "app/static"),
 ]
+
+import os
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 
 

@@ -49,31 +49,7 @@
             rowsData.map(item => {
                 var marker = L.marker([item[1], item[2]]).addTo(map); 
             })
-
-            /* $('select').change(function() {
-                var truckId = $(this).val();
-                $.ajax({
-                  url: '/get-id-tracks/',
-                  type: 'POST',
-                  data: {'id':truckId},
-                  success: function(response) {
-                    console.log(response)
-                    map.eachLayer(function(layer) {
-                        if (layer instanceof L.Marker) {
-                            map.removeLayer(layer);
-                        }
-                    });
-                    map.setView([response.rows[0][1], response.rows[0][2]], 19);
-                    response.rows.map(item => {
-                        var marker = L.marker([item[1], item[2]]).addTo(map); 
-                    })                    
-                  },
-                  error: function(xhr) {
-                    console.log(xhr.responseText);
-                  }
-                });
-              });
-            */
+            
             $(function() {
                 $('input[name="daterange"]').daterangepicker({
                     opens: 'left'

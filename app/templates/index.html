@@ -19,12 +19,12 @@
                             </thead>
                         </table>
                     </div>
-                    <div class="w-100 d-flex px-3 py-1 mt-4">
+                    {% comment %} <div class="w-100 d-flex px-3 py-1 mt-4">
                         <input type="text" class="me-2" name="daterange" value="01/01/2018 - 01/15/2018" />
                         <button type="button" class="btn btn-success btn-apply">Apply</button>
-                    </div>
+                    </div> {% endcomment %}
                     <div class="row mx-3 my-1">
-                        <button type="button" class="btn btn-success">Export CSV</button>
+                        <button type="button" id="export-csv" class="btn btn-success">Export CSV</button>
                     </div>
                 </div>
             </div>
@@ -130,7 +130,6 @@
                 // Get selected rows and log their data
                 var selectedRows = table.rows('.selected').data();
 
-                console.log(selectedRows)
                 map.eachLayer(function(layer) {
                     if (layer instanceof L.Marker) {
                         map.removeLayer(layer);
@@ -141,7 +140,6 @@
                 }
 
                 rowsData = Array.from(selectedRows)
-                console.log(rowsData)
 
                 map.eachLayer(layer => {
                     if (layer instanceof L.Marker) {
@@ -202,6 +200,29 @@
                 });
             });
             
+            $('#export-csv').click(function(){
+                var csvString = 'data:text/csv;charset=utf-8,';
+
+                csvarray = []
+                rowsData.forEach(function(row) {
+                    var csvrow = [row.id, row.lat, row.lon, row.status, row.time]
+                    console.log(csvrow)
+                    csvarray.push(csvrow)
+                });
+                if(csvarray.length == 0){
+                    alert("No Data selected!")
+                }
+                csvarray.forEach(function(row) {
+                    csvString += row.join(',') + '\r\n';
+                });
+                // Create link and trigger download
+                var link = document.createElement('a');
+                link.setAttribute('href', encodeURI(csvString));
+                link.setAttribute('download', 'selected_rows.csv');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            })
             
             function timeformat(data){
                 prevtime = parseInt(data)
@@ -213,15 +234,16 @@
                 prevtime = parseInt(data)
                 currenttime = Date.now()
                 timedivide = currenttime - prevtime
+                color = "#ffffff"
                 if (timedivide < 600000)
-                    return "#7af57a"
-                if(timedivide > 14400000){
-                    return '#ff7588'
-                }
+                    color = "#7af57a"
                 if (timedivide > 600000){
-                    return '#fcc772'
+                    color = '#fcc772'
                 }
-                
+                if(timedivide > 86400000){
+                    color = '#ff7588'
+                }
+                return color
             }
         })
     </script>

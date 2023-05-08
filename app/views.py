@@ -69,26 +69,29 @@ def get_data(request):
         draw = int(request.POST.get('draw'), 0)
         start = int(request.POST.get('start'), 0)
         length = int(request.POST.get('length'), 10)
-    with connections['trackdb'].cursor() as cursor:
-        # Modify the query to use the start and length parameters
-        cursor.execute("SELECT * FROM track_table LIMIT %s, %s", [start, length])
-        rows = cursor.fetchall()
-        cursor.execute("SELECT COUNT (*) AS cnt FROM track_table")
-        data = cursor.fetchall()
-        total_records = data[0][0]
+        sort = str(request.POST.get('order[0][dir]'))
+        print(sort)
 
-    
-    data = [{
-        'id' : row[0],
-        'status' : row[5],
-        'time' : row[3],
-        'lat' : row[1],
-        'lon' : row[2]
-    } for row in rows]
+        with connections['trackdb'].cursor() as cursor:
+            # Modify the query to use the start and length parameters
+            cursor.execute("SELECT * FROM track_table ORDER BY id " + sort+ " LIMIT %s, %s", [start, length])
+            rows = cursor.fetchall()
+            cursor.execute("SELECT COUNT (*) AS cnt FROM track_table")
+            data = cursor.fetchall()
+            total_records = data[0][0]
 
-    return JsonResponse ({
-        'draw':draw,
-        'recordsTotal': int(total_records),
-        'recordsFiltered' : int(total_records),
-        'data':data,
-    }, safe=False)
+        
+        data = [{
+            'id' : row[0],
+            'status' : row[5],
+            'time' : row[3],
+            'lat' : row[1],
+            'lon' : row[2]
+        } for row in rows]
+
+        return JsonResponse ({
+            'draw':draw,
+            'recordsTotal': int(total_records),
+            'recordsFiltered' : int(total_records),
+            'data':data,
+        }, safe=False)

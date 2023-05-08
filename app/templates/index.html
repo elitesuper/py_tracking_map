@@ -29,8 +29,14 @@
                 </div>
             </div>
             <div class="col-md-9 col-lg-8">
-                <div id="map">
-    
+                <div id="map" class="mt-5">
+                </div>
+                <div>
+                    <input type="range" class="form-range" id="timerange">
+                    <div class="w-100 d-flex justify-content-between">
+                        <p id="starttime"></p>
+                        <p id="endtime"></p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -38,18 +44,20 @@
 
     <script>
         $(document).ready(function(){
-            const rowsData = JSON.parse('{{ rows|safe }}');
-            console.log(rowsData)
+            var rowsData = {{ rows|safe }};
             var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
-        
-            rowsData.map(item => {
-                var marker = L.marker([item[1], item[2]]).addTo(map); 
-            })
-            
+
+            const $timerange = $('#timerange');
+            const $starttime = $('#starttime');
+            const $endtime = $('#endtime');
+            var maxValue = 0
+            var minValue = 0
+
+
             $(function() {
                 $('input[name="daterange"]').daterangepicker({
                     opens: 'left'
@@ -132,11 +140,70 @@
                     map.setView([selectedRows[0].lat, selectedRows[0].lon], 19);
                 }
 
-                selectedRows.each(function (rowData) {
-                    var marker = L.marker([rowData.lat, rowData.lon]).addTo(map); 
+                rowsData = Array.from(selectedRows)
+                console.log(rowsData)
+
+                map.eachLayer(layer => {
+                    if (layer instanceof L.Marker) {
+                      map.removeLayer(layer);
+                    }
+                });
+
+                rowsData.forEach(item => {
+                    const marker = L.marker([item.lat, item.lon]).addTo(map);
+                });
+                timearray = rowsData.map(item => item.time)
+                if(timearray.length > 1){
+                    maxValue = Math.max(...timearray)+100;
+                    minValue = Math.min(...timearray)-100;
+                }else{
+                    maxValue = Date.now()
+                    minValue = timearray[0]-100
+                }
+
+                $timerange.attr({'max': maxValue, 'min': minValue});
+
+                $starttime.text(timeformat(minValue))
+                $endtime.text(timeformat(maxValue))
+                $timerange.val(maxValue)
+            });
+            
+
+            timearray = rowsData.map(item => item.time)
+
+            if(timearray.length > 1){
+                maxValue = Math.max(...timearray) + 100;
+                minValue = Math.min(...timearray) - 100;
+            }else{
+                maxValue = Date.now()
+                minValue = timearray[0] -100 
+            }
+
+            $timerange.attr({'max': maxValue, 'min': minValue});
+
+            $starttime.text(timeformat(minValue))
+            $endtime.text(timeformat(maxValue))
+            
+            $timerange.val(maxValue)
+            $timerange.on('input', function() {
+
+                const endtime = parseInt($(this).val());
+                const starttime = parseInt($(this).attr('min'));
+                
+                const filteredData = rowsData.filter(item => item.time > starttime && item.time < endtime);
+  
+                map.eachLayer(layer => {
+                  if (layer instanceof L.Marker) {
+                    map.removeLayer(layer);
+                  }
+                });
+                
+                filteredData.forEach(item => {
+                  const marker = L.marker([item.lat, item.lon]).addTo(map);
                 });
             });
-
+            
+            
             function timeformat(data){
                 prevtime = parseInt(data)
                 m_date = new Date(prevtime).toISOString()
@@ -147,7 +214,6 @@
                 prevtime = parseInt(data)
                 currenttime = Date.now()
                 timedivide = currenttime - prevtime
-                console.log(timedivide)
                 if (timedivide < 600000)
                     return "#7af57a"
                 if(timedivide > 14400000){

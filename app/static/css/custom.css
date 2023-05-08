@@ -1,4 +1,9 @@
-#map { height: 100vh; padding-top: 1rem; padding-bottom: 1rem;}
+#map { 
+    /* height: 100vh; */
+    min-height: 550px; 
+    padding-top: 1rem; 
+    padding-bottom: 1rem;
+}
 .btn-apply {width: inherit;}
 .paginate_button > a{
     font-size: 12px;

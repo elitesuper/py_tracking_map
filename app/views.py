@@ -10,7 +10,7 @@ import json
 @login_required
 def index(request):
     with connections['trackdb'].cursor() as cursor:
-        cursor.execute("SELECT * FROM track_table LIMIT 0, 10")
+        cursor.execute("SELECT * FROM track_table LIMIT 0, 20")
         rows = cursor.fetchall()
         cursor.execute("SELECT id FROM track_table GROUP BY id")
         ids = cursor.fetchall()
@@ -18,9 +18,16 @@ def index(request):
     # print(rows)
     # print(ids)
     ids_data = [{"id":id[0]} for id in ids]
-    print(ids_data)
+    data = [{
+        'id' : row[0],
+        'status' : row[5],
+        'time' : row[3],
+        'lat' : row[1],
+        'lon' : row[2]
+    } for row in rows]
+    
     context = {
-        'rows': json.dumps(rows),
+        'rows': data,
         'trucks': ids_data
     }
     return render(request, 'index.html', context)

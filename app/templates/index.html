@@ -184,7 +184,6 @@
             $starttime.text(timeformat(minValue))
             $endtime.text(timeformat(maxValue))
             
-            $timerange.val(maxValue)
             $timerange.on('input', function() {
 
                 const endtime = parseInt($(this).val());

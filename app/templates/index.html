@@ -19,10 +19,14 @@
                             </thead>
                         </table>
                     </div>
-                    {% comment %} <div class="w-100 d-flex px-3 py-1 mt-4">
-                        <input type="text" class="me-2" name="daterange" value="01/01/2018 - 01/15/2018" />
-                        <button type="button" class="btn btn-success btn-apply">Apply</button>
-                    </div> {% endcomment %}
+                    <div class="row d-flex px-3 py-1 mt-4">
+                        <div class="col-7">
+                            <input type="text" class="w-100" id="daterange" name="daterange" />
+                        </div>
+                        <div class="col-5">
+                            <button type="button" class="btn btn-success btn-apply w-100">Apply</button>
+                        </div>
+                    </div>
                     <div class="row mx-3 my-1">
                         <button type="button" id="export-csv" class="btn btn-success">Export CSV</button>
                     </div>
@@ -57,13 +61,30 @@
             var maxValue = 0
             var minValue = 0
 
-
+            /*
             $(function() {
                 $('input[name="daterange"]').daterangepicker({
-                    opens: 'left'
+                    opens: 'left',
+                    locale: {
+                        format: 'YYYY/MM/DD'
+                    }
                 }, function(start, end, label) {
-                    console.log("A new date selection was made: " + start.format('YYYY-MM-DD') + ' to ' + end.format('YYYY-MM-DD'));
+
                 });
+            });
+            */
+
+            $('#daterange').dateRangePicker(
+            {
+                startOfWeek: 'monday',
+                separator : ' ~ ',
+                format: 'YYYY/MM/DD HH:mm',
+                autoClose: false,
+                time: {
+                    enabled: true
+                },
+                defaultTime: moment().startOf('day').toDate(),
+                defaultEndTime: moment().endOf('day').toDate()
             });
 
             $('#applications').DataTable({
@@ -91,7 +112,7 @@
                 },
                 ajax: {
                     url : 'get-data/',
-                    type : 'POST',
+                    type : 'POST'
                 },
                 columns: [
                     {
@@ -114,6 +135,7 @@
                     },
                     {
                         data:'time',
+                        orderable:true,
                         render: function(data, type, row) {
                             var changed = timeformat(data)
                             return changed
@@ -122,6 +144,40 @@
                 ]
             });
 
+            $('.btn-apply').click(function(){
+                var daterange = $("input[name='daterange']").val();
+                
+                var dates = daterange.split(' ~ ')
+                var minValue = dates[0];
+                var maxValue = dates[1];
+                var unixTimestampMinValue = Math.floor(Date.parse(minValue) / 1000);
+                var unixTimestampMaxValue = Math.floor(Date.parse(maxValue) / 1000);
+                
+                $timerange.attr({'max': unixTimestampMaxValue, 'min': unixTimestampMinValue});
+                
+                $.ajax({
+                    type: 'POST',
+                    url: 'get-data-by-date/',
+                    data: { startDate: unixTimestampMinValue, endDate: unixTimestampMaxValue },
+                    success: function(data){
+                        map.eachLayer(function(layer) {
+                            if (layer instanceof L.Marker) {
+                                map.removeLayer(layer);
+                            }
+                        });
+
+                        if (data.rows.length > 0){
+                            for (var i = 0; i < data.rows.length; i++){
+                                var marker = L.marker([data.rows[i][1], data.rows[i][2]]).addTo(map);
+                            }
+                        }
+                    }
+                })
+
+                $starttime.text(minValue)
+                $endtime.text(maxValue)
+            });
+            
             var table = $('#applications').DataTable();
             $('#applications tbody').on('click', 'tr', function () {
                 // Toggle the selected class on the selected row
@@ -155,10 +211,9 @@
                     maxValue = Math.max(...timearray)+100;
                     minValue = Math.min(...timearray)-100;
                 }else{
-                    maxValue = Date.now()
-                    minValue = timearray[0]-100
+                    minValue = maxValue = Date.now();
                 }
-
+                
                 $timerange.attr({'max': maxValue, 'min': minValue});
 
                 $starttime.text(timeformat(minValue))
@@ -205,12 +260,12 @@
 
                 csvarray = []
                 rowsData.forEach(function(row) {
-                    var csvrow = [row.id, row.lat, row.lon, row.status, row.time]
-                    console.log(csvrow)
-                    csvarray.push(csvrow)
+                    var csvrow = [row.id, row.lat, row.lon, row.status, row.time];
+                    csvarray.push(csvrow);
                 });
                 if(csvarray.length == 0){
-                    alert("No Data selected!")
+                    alert("No Data selected!");
+                    return;
                 }
                 csvarray.forEach(function(row) {
                     csvString += row.join(',') + '\r\n';
@@ -225,10 +280,19 @@
             })
             
             function timeformat(data){
-                prevtime = parseInt(data)
-                m_date = new Date(prevtime).toISOString()
-                datetime = m_date.substr(0, 10) + " " + m_date.substr(11, 8);
-                return datetime
+                if (data.toString().length < 11) {
+                    var dateObj = new Date(data * 1000)
+                } else {
+                    var dateObj = new Date(data);
+                }
+                var year = dateObj.getFullYear();
+                var month = ('0' + (dateObj.getMonth() + 1)).slice(-2);
+                var day = ('0' + dateObj.getDate()).slice(-2);
+                var hours = ('0' + dateObj.getHours()).slice(-2);
+                var minutes = ('0' + dateObj.getMinutes()).slice(-2);
+                var seconds = ('0' + dateObj.getSeconds()).slice(-2);
+                var dateString = year + '/' + month + '/' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+                return dateString;
             }
             function timestyle(data){
                 prevtime = parseInt(data)

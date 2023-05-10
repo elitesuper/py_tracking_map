@@ -5,18 +5,17 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import connections
 from django.http import JsonResponse
 import json
+from datetime import date, timedelta
 
 # Create your views here.
 @login_required
 def index(request):
     with connections['trackdb'].cursor() as cursor:
-        cursor.execute("SELECT * FROM track_table LIMIT 0, 20")
+        cursor.execute("SELECT * FROM track_table LIMIT 0, 1000")
         rows = cursor.fetchall()
         cursor.execute("SELECT id FROM track_table GROUP BY id")
         ids = cursor.fetchall()
 
-    # print(rows)
-    # print(ids)
     ids_data = [{"id":id[0]} for id in ids]
     data = [{
         'id' : row[0],
@@ -30,6 +29,7 @@ def index(request):
         'rows': data,
         'trucks': ids_data
     }
+
     return render(request, 'index.html', context)
 
 
@@ -53,7 +53,7 @@ def get_id_tracks(request):
         id = request.POST['id']
         with connections['trackdb'].cursor() as cursor:
             if id == "ALL":
-                cursor.execute("SELECT * FROM track_table")
+                cursor.execute("SELECT * FROM track_table LIMIT 0, 1000")
             else:
                 cursor.execute("SELECT * FROM track_table WHERE id = %s", [id])
             data = cursor.fetchall()
@@ -64,17 +64,38 @@ def get_id_tracks(request):
         })
 
 @csrf_exempt
+def get_data_by_date(request):
+    if request.method == 'POST':
+        start_date = request.POST['startDate']
+        end_date = request.POST['endDate']
+        
+        with connections['trackdb'].cursor() as cursor:
+            cursor.execute("SELECT * FROM track_table WHERE timestamp BETWEEN " + start_date + " AND " + end_date + " LIMIT 0, 1000")
+            data = cursor.fetchall()
+        
+        return JsonResponse({
+            'status' : 'OK',
+            'rows' : data
+        })
+
+@csrf_exempt
 def get_data(request):
     if request.method == 'POST':
         draw = int(request.POST.get('draw'), 0)
         start = int(request.POST.get('start'), 0)
         length = int(request.POST.get('length'), 10)
         sort = str(request.POST.get('order[0][dir]'))
-        print(sort)
+        sort_column = str(request.POST.get('order[0][column]'))
 
         with connections['trackdb'].cursor() as cursor:
             # Modify the query to use the start and length parameters
-            cursor.execute("SELECT * FROM track_table ORDER BY id " + sort+ " LIMIT %s, %s", [start, length])
+            sort_col = "id"
+            if sort_column == "1":
+                sort_col = 'id'
+            elif sort_column == "3":
+                sort_col = 'timestamp'
+            
+            cursor.execute("SELECT * FROM track_table ORDER BY " + sort_col + " " + sort+ " LIMIT %s, %s", [start, length])
             rows = cursor.fetchall()
             cursor.execute("SELECT COUNT (*) AS cnt FROM track_table")
             data = cursor.fetchall()

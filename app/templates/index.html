@@ -154,7 +154,8 @@
                 var unixTimestampMaxValue = Math.floor(Date.parse(maxValue) / 1000);
                 
                 $timerange.attr({'max': unixTimestampMaxValue, 'min': unixTimestampMinValue});
-                
+                $timerange.val(unixTimestampMaxValue);
+
                 $.ajax({
                     type: 'POST',
                     url: 'get-data-by-date/',
@@ -173,9 +174,8 @@
                         }
                     }
                 })
-
-                $starttime.text(minValue)
-                $endtime.text(maxValue)
+                $starttime.text(minValue);
+                $endtime.text(maxValue);
             });
             
             var table = $('#applications').DataTable();

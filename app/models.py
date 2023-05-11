@@ -34,3 +34,10 @@ class User(AbstractBaseUser):
     
     def __str__(self):
         return self.email
+
+class UserDevice(models.Model):
+    device_id = models.CharField(max_length=50)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=False, null=False)
+
+    def __str__(self):
+        return self.device_id

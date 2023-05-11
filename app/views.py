@@ -7,6 +7,8 @@ from django.http import JsonResponse
 import json
 from datetime import date, timedelta
 from .forms import UserRegistrationForm, LoginForm
+from .models import User, UserDevice
+from django.db.models import Q
 
 # Create your views here.
 
@@ -45,16 +47,37 @@ def user_register(request):
 
 
 @login_required
+@csrf_exempt
 def index(request):
-    user = request.user
-    
+    ids_data = []
     with connections['trackdb'].cursor() as cursor:
-        cursor.execute("SELECT * FROM track_table")
-        rows = cursor.fetchall()
-        cursor.execute("SELECT id FROM track_table GROUP BY id")
-        ids = cursor.fetchall()
 
-    ids_data = [{"id":id[0]} for id in ids]
+        query = "SELECT * FROM track_table"
+        where_clause = ""
+
+        if request.user.is_superuser == 1:
+            cursor.execute("SELECT id FROM track_table GROUP BY id")
+            ids = cursor.fetchall()
+            ids_data = [{"id":id[0]} for id in ids]  
+        else:
+            user_id = request.user.id
+            device_ids = UserDevice.objects.filter(Q(user_id=user_id))
+            if device_ids:
+                # Build WHERE clause with IN clause for device IDs
+                where_clause = " WHERE id IN ('"
+                for i, device_id in enumerate(device_ids):
+                    if i > 0:
+                        where_clause += "', '"
+                    where_clause += str(device_id)
+                where_clause += "')"
+            else:
+                where_clause = " WHERE 1 = 2"
+            
+            query = query + where_clause
+        print(query)
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
     data = [{
         'id' : row[0],
         'status' : row[5],
@@ -71,29 +94,31 @@ def index(request):
     return render(request, 'index.html', context)
 
 @csrf_exempt
-def get_id_tracks(request):
-    if request.method == 'POST':
-        id = request.POST['id']
-        with connections['trackdb'].cursor() as cursor:
-            if id == "ALL":
-                cursor.execute("SELECT * FROM track_table")
-            else:
-                cursor.execute("SELECT * FROM track_table WHERE id = %s", [id])
-            data = cursor.fetchall()
-
-        return JsonResponse ({
-            'status' : 'OK',
-            'rows': data,
-        })
-
-@csrf_exempt
 def get_data_by_date(request):
     if request.method == 'POST':
         start_date = request.POST['startDate']
         end_date = request.POST['endDate']
-        
+
         with connections['trackdb'].cursor() as cursor:
-            cursor.execute("SELECT * FROM track_table WHERE timestamp BETWEEN " + start_date + " AND " + end_date)
+            query = "SELECT * FROM track_table WHERE timestamp BETWEEN " + start_date + " AND " + end_date
+
+            if request.user.is_superuser == 0:
+                user_id = request.user.id
+                device_ids = UserDevice.objects.filter(Q(user_id=user_id))
+                if device_ids:
+                    # Build WHERE clause with IN clause for device IDs
+                    where_clause = " AND id IN ('"
+                    for i, device_id in enumerate(device_ids):
+                        if i > 0:
+                            where_clause += "', '"
+                        where_clause += str(device_id)
+                    where_clause += "')"
+                else:
+                    where_clause = " AND 1 = 2"
+                
+                query = query + where_clause
+            
+            cursor.execute(query)
             data = cursor.fetchall()
         
         return JsonResponse({
@@ -118,9 +143,48 @@ def get_data(request):
             elif sort_column == "3":
                 sort_col = 'timestamp'
             
-            cursor.execute("SELECT * FROM track_table ORDER BY " + sort_col + " " + sort+ " LIMIT %s, %s", [start, length])
+            query = "SELECT * FROM track_table "
+            where_clause = ""
+
+            if request.user.is_superuser == 0:
+                user_id = request.user.id
+                device_ids = UserDevice.objects.filter(Q(user_id=user_id))
+                if device_ids:
+                    # Build WHERE clause with IN clause for device IDs
+                    where_clause = " WHERE id IN ('"
+                    for i, device_id in enumerate(device_ids):
+                        if i > 0:
+                            where_clause += "', '"
+                        where_clause += str(device_id)
+                    where_clause += "')"
+                else:
+                    where_clause = " WHERE 1 = 2"
+                
+                query = query + where_clause
+            
+            query = query + " ORDER BY " + sort_col + " " + sort + " LIMIT %s, %s"
+            params = [start, length]
+
+            cursor.execute(query, params)
             rows = cursor.fetchall()
-            cursor.execute("SELECT COUNT (*) AS cnt FROM track_table")
+
+            query = "SELECT COUNT (*) AS cnt FROM track_table"
+            if request.user.is_superuser == 0:
+                user_id = request.user.id
+                device_ids = UserDevice.objects.filter(Q(user_id=user_id))
+                if device_ids:
+                    # Build WHERE clause with IN clause for device IDs
+                    where_clause = " WHERE id IN ('"
+                    for i, device_id in enumerate(device_ids):
+                        if i > 0:
+                            where_clause += "', '"
+                        where_clause += str(device_id)
+                    where_clause += "')"
+                else:
+                    where_clause = " WHERE 1 = 2"
+                
+                query = query + where_clause
+            cursor.execute(query)
             data = cursor.fetchall()
             total_records = data[0][0]
 
@@ -139,3 +203,51 @@ def get_data(request):
             'recordsFiltered' : int(total_records),
             'data':data,
         }, safe=False)
+
+@csrf_exempt
+def get_users(request):
+    if request.method == 'POST':
+        users = User.objects.filter(Q(is_superuser=0) & Q(is_active=1))
+    total_records = users.count()
+    
+    data = [{
+        'id': obj.id,
+        'email': obj.email,
+        'first_name': obj.first_name, 
+        'last_name': obj.last_name,
+    } for obj in users]
+        
+    return JsonResponse ({
+        'data': data,
+        'recordsTotal': int(total_records),
+        'recordsFiltered' : int(total_records),
+    }, safe=False)
+
+@csrf_exempt
+def get_device_by_user(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('id')
+        device_ids = UserDevice.objects.filter(Q(user_id=user_id))
+    
+    data = [{
+        'device_id': obj.device_id
+    } for obj in device_ids]
+
+    return JsonResponse ({
+        'data' : data
+    })
+
+@csrf_exempt
+def update_decice_by_user(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('id')
+        device_ids = request.POST.getlist('device_ids[]')
+        
+        UserDevice.objects.filter(Q(user_id=user_id)).delete()
+
+        for device in device_ids:
+            UserDevice.objects.create(user_id=user_id, device_id=device)
+
+    return JsonResponse({
+        'result' : 'success'
+    })

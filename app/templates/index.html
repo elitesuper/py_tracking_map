@@ -4,11 +4,6 @@
 
 {% block content %}
     <div class="container-fluid">
-        <div class="row mt-3">
-            <div class="col-md-12 float-right">
-                <button type="button"><a href="{% url 'app:logout' %}">logout</a></button>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-3 col-lg-4 ps-2">
                 <div class="tool-bar mt-1 my-1">
@@ -26,7 +21,7 @@
                     </div>
                     <div class="row d-flex px-3 py-1 mt-4">
                         <div class="col-7">
-                            <input type="text" class="w-100" id="daterange" name="daterange" />
+                            <input type="text" class="w-100 form-control" id="daterange" name="daterange" />
                         </div>
                         <div class="col-5">
                             <button type="button" class="btn btn-success btn-apply w-100">Apply</button>
@@ -50,22 +45,118 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-10">
-                <select name="field1" id="field1" multiple multiselect-hide-x="true" style="width:100%">
-                    <option value="1">Audi</option>
-                    <option selected value="2">BMW</option>
-                    <option selected value="3">Mercedes</option>
-                    <option value="4">Volvo</option>
-                    <option value="5">Lexus</option>
-                    <option value="6">Tesla</option>
-                </select>
+        {% if request.user.is_superuser == 1 %}
+            <div class="row">
+                <div class="col-md-8">
+                    <table id="usersList" class="table table-striped" style="width:100%">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div class="col-md-4" id="multiselect">
+                    <label for="my-element">Device ID List</label>
+                    <input type="text" class="form-control" id="my-element" style="display:none;">
+                </div>
             </div>
-        </div>
+        {% endif %}
     </div>
-
     <script>
         $(document).ready(function(){
+            var is_superuser = '{{ request.user.is_superuser }}';
+            var mySellect;
+
+            if (is_superuser === 'True') {
+                var device_ids = {{ trucks|safe }};
+                var origin_list = device_ids.map(item => item.id);
+                var destin_list = [];
+
+                $('#usersList').DataTable({
+                    processing: true,
+                    serverSide: true,
+                    ordering: false,
+                    lengthChange:false,
+                    searching: false,
+                    select: 'single',
+                    ajax: {
+                        url : 'get-users/',
+                        type : 'POST'
+                    },
+                    select: {
+                        style: 'single',
+                        selector: 'td:first-child'
+                    },
+                    columns: [
+                        {
+                            data:'email', 
+                            orderable:false
+                        },
+                        {
+                            data:'first_name',
+                            orderable:false
+                        },
+                        {
+                            data:'last_name',
+                            orderable:false
+                        },
+                    ]
+                });
+
+                var userTable = $('#usersList').DataTable();
+                $('#usersList tbody').on('click', 'tr', function () {
+                    if ($(this).hasClass('selected')) {
+                        $(this).removeClass('selected');
+                    } else {
+                        userTable.$('tr.selected').removeClass('selected');
+                        $(this).addClass('selected');
+                    }
+                    var selectedRows = userTable.row('.selected').data();
+                    var id = selectedRows['id'];
+                    
+                    $.ajax({
+                        type: 'POST',
+                        url: 'get-device-by-user/',
+                        data: { id: id },
+                        success: function(data){
+                            var device_ids = data.data.map(item=>item.device_id);
+                            $('.sellect-container').remove();
+                            var newElement = document.createElement("input");
+                            newElement.setAttribute("class", "form-control");
+                            newElement.setAttribute("id", "my-element");
+                            newElement.style.display="none";
+                            var myDiv = document.getElementById("multiselect");
+                            myDiv.appendChild(newElement);
+
+                            mySellect = sellect("#my-element", {
+                                originList: origin_list,
+                                destinationList: device_ids,
+                                onInsert: updateDeviceList
+                            });
+                            mySellect.init();
+                        }
+                    });
+
+                    function updateDeviceList() {
+                        var device_ids = mySellect.getSelected()
+                        
+                        $.ajax({
+                            type: 'POST',
+                            url: 'update-device-by-user/',
+                            data: { id: id, device_ids: device_ids},
+                            success: function(data){
+                                
+                            }
+                        });
+                    }
+                });
+            }
+
+            
+            
             var rowsData = {{ rows|safe }};
             var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -162,7 +253,6 @@
                 ]
             });
             
-
             $('.btn-apply').click(function(){
                 var daterange = $("input[name='daterange']").val();
                 
@@ -180,6 +270,7 @@
                     url: 'get-data-by-date/',
                     data: { startDate: unixTimestampMinValue, endDate: unixTimestampMaxValue },
                     success: function(data){
+                        console.log(data);
                         map.eachLayer(function(layer) {
                             if (layer instanceof L.Marker) {
                                 map.removeLayer(layer);
@@ -192,7 +283,7 @@
                             }
                         }
                     }
-                })
+                });
                 $starttime.text(minValue);
                 $endtime.text(maxValue);
             });

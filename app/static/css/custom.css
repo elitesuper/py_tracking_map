@@ -13,7 +13,7 @@
     font-size: 12px;
 }
 
-#applications{
+#applications, #usersList{
     cursor: pointer;
 }
 
@@ -32,4 +32,21 @@
 
 .multiselect-dropdown-list-wrapper{
     margin-top:32px;
+}
+
+a, span, th, td {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol" !important;
+}
+
+a, span {
+    font-size:12px;
+}
+
+#daterange{
+    font-size:13px;
+    text-align: center;
+}
+
+.sellect-container{
+    padding:13px 5px 0 5px;
 }

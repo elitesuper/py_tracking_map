@@ -29,3 +29,7 @@
 .date-picker-wrapper .drp_top-bar .apply-btn{
     background: #198754;
 }
+
+.multiselect-dropdown-list-wrapper{
+    margin-top:32px;
+}

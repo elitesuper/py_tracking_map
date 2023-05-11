@@ -6,12 +6,50 @@ from django.db import connections
 from django.http import JsonResponse
 import json
 from datetime import date, timedelta
+from .forms import UserRegistrationForm, LoginForm
 
 # Create your views here.
+
+def user_login(request):
+    if request.method == 'POST':
+        form = LoginForm(data=request.POST)
+        if form.is_valid():
+            email = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, email=email, password=password)
+            if user is not None:
+                next_url = request.POST.get('next') or request.GET.get('next', '/')
+                login(request, user)
+                return redirect(next_url)
+    else:
+        form = LoginForm()
+    return render(request, 'login.html', {'form': form})
+
+def user_logout(request):
+    if request.method == 'GET':
+        logout(request)
+        return redirect('/login/')
+
+def user_register(request):
+    if request.method == 'POST':
+        form = UserRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data['password'])
+            user.save()
+            login(request, user)
+            return redirect('/')
+    else:
+        form = UserRegistrationForm()
+    return render(request, 'register.html', {'form': form})
+
+
 @login_required
 def index(request):
+    user = request.user
+    
     with connections['trackdb'].cursor() as cursor:
-        cursor.execute("SELECT * FROM track_table LIMIT 0, 1000")
+        cursor.execute("SELECT * FROM track_table")
         rows = cursor.fetchall()
         cursor.execute("SELECT id FROM track_table GROUP BY id")
         ids = cursor.fetchall()
@@ -32,28 +70,13 @@ def index(request):
 
     return render(request, 'index.html', context)
 
-
-def user_login(request):
-    if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        next_url = request.POST.get('next') or request.GET.get('next', '/')
-        if user is not None:
-            login(request, user)
-            return redirect(next_url)
-        else:
-            return render(request, 'login.html', {'error': 'Invalid username or password'})
-    else:
-        return render(request, 'login.html')
-
 @csrf_exempt
 def get_id_tracks(request):
     if request.method == 'POST':
         id = request.POST['id']
         with connections['trackdb'].cursor() as cursor:
             if id == "ALL":
-                cursor.execute("SELECT * FROM track_table LIMIT 0, 1000")
+                cursor.execute("SELECT * FROM track_table")
             else:
                 cursor.execute("SELECT * FROM track_table WHERE id = %s", [id])
             data = cursor.fetchall()
@@ -70,7 +93,7 @@ def get_data_by_date(request):
         end_date = request.POST['endDate']
         
         with connections['trackdb'].cursor() as cursor:
-            cursor.execute("SELECT * FROM track_table WHERE timestamp BETWEEN " + start_date + " AND " + end_date + " LIMIT 0, 1000")
+            cursor.execute("SELECT * FROM track_table WHERE timestamp BETWEEN " + start_date + " AND " + end_date)
             data = cursor.fetchall()
         
         return JsonResponse({

@@ -69,6 +69,18 @@
         $(document).ready(function(){
             var is_superuser = '{{ request.user.is_superuser }}';
             var mySellect;
+            var rowsData = [];
+
+            $('#daterange').dateRangePicker(
+            {
+                startOfWeek: 'monday',
+                separator : ' ~ ',
+                format: 'YYYY/MM/DD HH:mm',
+                autoClose: false,
+                time: {
+                    enabled: true
+                }
+            });
 
             if (is_superuser === 'True') {
                 var device_ids = {{ trucks|safe }};
@@ -154,13 +166,10 @@
                     }
                 });
             }
-
             
-            
-            var rowsData = {{ rows|safe }};
             var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
+                maxZoom: 25,
                 attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             }).addTo(map);
 
@@ -169,32 +178,6 @@
             const $endtime = $('#endtime');
             var maxValue = 0
             var minValue = 0
-
-            /*
-            $(function() {
-                $('input[name="daterange"]').daterangepicker({
-                    opens: 'left',
-                    locale: {
-                        format: 'YYYY/MM/DD'
-                    }
-                }, function(start, end, label) {
-
-                });
-            });
-            */
-
-            $('#daterange').dateRangePicker(
-            {
-                startOfWeek: 'monday',
-                separator : ' ~ ',
-                format: 'YYYY/MM/DD HH:mm',
-                autoClose: false,
-                time: {
-                    enabled: true
-                },
-                defaultTime: moment().startOf('day').toDate(),
-                defaultEndTime: moment().endOf('day').toDate()
-            });
 
             $('#applications').DataTable({
                 processing: true,
@@ -253,9 +236,10 @@
                 ]
             });
             
+            var table = $('#applications').DataTable();
+
             $('.btn-apply').click(function(){
                 var daterange = $("input[name='daterange']").val();
-                
                 var dates = daterange.split(' ~ ')
                 var minValue = dates[0];
                 var maxValue = dates[1];
@@ -264,95 +248,50 @@
                 
                 $timerange.attr({'max': unixTimestampMaxValue, 'min': unixTimestampMinValue});
                 $timerange.val(unixTimestampMaxValue);
+                $starttime.text(minValue);
+                $endtime.text(maxValue);
+
+                var selectedRows = JSON.stringify(Array.from(table.rows('.selected').data()).map(obj => obj.id));
 
                 $.ajax({
                     type: 'POST',
-                    url: 'get-data-by-date/',
-                    data: { startDate: unixTimestampMinValue, endDate: unixTimestampMaxValue },
+                    url: 'get-map-data/',
+                    data: { startDate: unixTimestampMinValue, endDate: unixTimestampMaxValue, ids: selectedRows},
                     success: function(data){
-                        console.log(data);
                         map.eachLayer(function(layer) {
                             if (layer instanceof L.Marker) {
                                 map.removeLayer(layer);
                             }
                         });
-
+                        
                         if (data.rows.length > 0){
-                            for (var i = 0; i < data.rows.length; i++){
-                                var marker = L.marker([data.rows[i][1], data.rows[i][2]]).addTo(map);
-                            }
+                            rowsData = data.rows;
+
+                            var markers = L.markerClusterGroup();
+                            map.addLayer(markers);
+                            
+                            data.rows.forEach(item => {
+                                const marker = L.marker([item.lat, item.lon])
+                                markers.addLayer(marker);
+                            });
+                            map.setView([data.rows[0].lat, data.rows[0].lon], 19);
                         }
                     }
                 });
-                $starttime.text(minValue);
-                $endtime.text(maxValue);
-            });
-            
-            var table = $('#applications').DataTable();
-            $('#applications tbody').on('click', 'tr', function () {
-                // Toggle the selected class on the selected row
-                $(this).toggleClass('selected');
-            
-                // Get selected rows and log their data
-                var selectedRows = table.rows('.selected').data();
-
-                map.eachLayer(function(layer) {
-                    if (layer instanceof L.Marker) {
-                        map.removeLayer(layer);
-                    }
-                });
-                if(selectedRows.length > 0){
-                    map.setView([selectedRows[0].lat, selectedRows[0].lon], 19);
-                }
-
-                rowsData = Array.from(selectedRows)
-
-                map.eachLayer(layer => {
-                    if (layer instanceof L.Marker) {
-                      map.removeLayer(layer);
-                    }
-                });
-
-                rowsData.forEach(item => {
-                    const marker = L.marker([item.lat, item.lon]).addTo(map);
-                });
-                timearray = rowsData.map(item => item.time)
-                if(timearray.length > 1){
-                    maxValue = Math.max(...timearray)+100;
-                    minValue = Math.min(...timearray)-100;
-                }else{
-                    minValue = maxValue = Date.now();
-                }
                 
-                $timerange.attr({'max': maxValue, 'min': minValue});
-
-                $starttime.text(timeformat(minValue))
-                $endtime.text(timeformat(maxValue))
-                $timerange.val(maxValue)
             });
             
-
-            timearray = rowsData.map(item => item.time)
-
-            if(timearray.length > 1){
-                maxValue = Math.max(...timearray) + 100;
-                minValue = Math.min(...timearray) - 100;
-            }else{
-                maxValue = Date.now()
-                minValue = timearray[0] -100 
-            }
-
-            $timerange.attr({'max': maxValue, 'min': minValue});
-
-            $starttime.text(timeformat(minValue))
-            $endtime.text(timeformat(maxValue))
+            
+            $('#applications tbody').on('click', 'tr', function () {
+                $(this).toggleClass('selected');
+            });
             
             $timerange.on('input', function() {
 
                 const endtime = parseInt($(this).val());
                 const starttime = parseInt($(this).attr('min'));
                 
-                const filteredData = rowsData.filter(item => item.time > starttime && item.time < endtime);
+                const filteredData = rowsData.filter(item => item.timestamp > starttime && item.timestamp < endtime);
   
                 map.eachLayer(layer => {
                   if (layer instanceof L.Marker) {
@@ -360,9 +299,14 @@
                   }
                 });
                 
+                var markers = L.markerClusterGroup();
+                map.addLayer(markers);
+                
                 filteredData.forEach(item => {
-                  const marker = L.marker([item.lat, item.lon]).addTo(map);
+                    const marker = L.marker([item.lat, item.lon])
+                    markers.addLayer(marker);
                 });
+                map.setView([filteredData[0].lat, filteredData[0].lon], 19);
             });
             
             $('#export-csv').click(function(){

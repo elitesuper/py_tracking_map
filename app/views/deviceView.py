@@ -120,7 +120,7 @@ def get_map_data(request):
                         query += "', '"
                     query += str(device_id)
                 query += "')"
-            
+            print(query)
             cursor.execute(query)
             rows = cursor.fetchall()
             

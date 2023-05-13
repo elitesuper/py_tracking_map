@@ -3,6 +3,35 @@
 {% block title %} Main Page {% endblock %}
 
 {% block content %}
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLavel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="myModalLabel">Device Information</h5>
+          <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+            <div class="row">
+                <label class="col-md-4">Device ID: </label>
+                <label class="col-md-8" id="devId"></label>
+            </div>
+            <div class="row">
+                <label class="col-md-4">Latitude: </label>
+                <label class="col-md-8" id="lat"></label>
+            </div>
+            <div class="row">
+                <label class="col-md-4">Longitude: </label>
+                <label class="col-md-8" id="lon"></label>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="confirmInfo">Ok</button>
+        </div>
+      </div>
+    </div>
+</div>
     <div class="container-fluid">
         <div class="row">
             <div class="col-md-3 col-lg-4 ps-2">
@@ -167,6 +196,10 @@
                 });
             }
             
+            $('#confirmInfo').on('click', function(){
+                $('#myModal').modal('hide');
+            });
+
             var map = L.map('map').setView([-34.4450409, 150.8531664], 13);
             L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 25,
@@ -271,8 +304,14 @@
                             map.addLayer(markers);
                             
                             data.rows.forEach(item => {
-                                const marker = L.marker([item.lat, item.lon])
-                                markers.addLayer(marker);
+                                const marker = L.marker([item.lat, item.lon]);
+                                marker.on('click', () => {
+                                    $('#lat').text(item.lat);
+                                    $('#lon').text(item.lon);
+                                    $('#devId').text(item.id)
+                                    $('#myModal').modal('show');
+                                });
+                                markers.addLayer(marker);                                    
                             });
                             map.setView([data.rows[0].lat, data.rows[0].lon], 19);
                         }

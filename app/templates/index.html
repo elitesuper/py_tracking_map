@@ -25,9 +25,10 @@
                 <label class="col-md-4">Longitude: </label>
                 <label class="col-md-8" id="lon"></label>
             </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-primary" id="confirmInfo">Ok</button>
+            <div class="row">
+                <label class="col-md-4">Timestamp: </label>
+                <label class="col-md-8" id="timestamp"></label>
+            </div>
         </div>
       </div>
     </div>
@@ -308,7 +309,8 @@
                                 marker.on('click', () => {
                                     $('#lat').text(item.lat);
                                     $('#lon').text(item.lon);
-                                    $('#devId').text(item.id)
+                                    $('#devId').text(item.id);
+                                    $('#timestamp').text(timeformat(item.timestamp))
                                     $('#myModal').modal('show');
                                 });
                                 markers.addLayer(marker);                                    

@@ -53,9 +53,9 @@ def get_data(request):
                     where_clause = " WHERE 1 = 2 "
 
             # sort column setting.
-            sort_col = "id"
+            sort_col = "a.id"
             if sort_column == "3":
-                sort_col = "timestamp"
+                sort_col = "a.timestamp"
             else:
                 sort_col = "b.id"
             
